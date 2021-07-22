@@ -28,6 +28,7 @@ struct PlotMemory {
     auto_bounds: bool,
     hovered_entry: Option<String>,
     hidden_items: HashSet<String>,
+    min_auto_bounds: Bounds,
 }
 
 // ----------------------------------------------------------------------------
@@ -363,7 +364,7 @@ impl Widget for Plot {
 
         let plot_id = ui.make_persistent_id(id_source);
 
-        let memory = ui
+        let mut memory = ui
             .memory()
             .id_data
             .get_mut_or_insert_with(plot_id, || PlotMemory {
@@ -371,8 +372,21 @@ impl Widget for Plot {
                 auto_bounds: !min_auto_bounds.is_valid(),
                 hovered_entry: None,
                 hidden_items: HashSet::new(),
+                min_auto_bounds,
             })
             .clone();
+
+        // If the min bounds changed, recalculate everything.
+        if min_auto_bounds != memory.min_auto_bounds {
+            memory = PlotMemory {
+                bounds: min_auto_bounds,
+                auto_bounds: !min_auto_bounds.is_valid(),
+                hovered_entry: None,
+                min_auto_bounds,
+                ..memory
+            };
+            ui.memory().id_data.insert(plot_id, memory.clone());
+        }
 
         let PlotMemory {
             mut bounds,
@@ -526,6 +540,7 @@ impl Widget for Plot {
                 auto_bounds,
                 hovered_entry,
                 hidden_items,
+                min_auto_bounds,
             },
         );
 
